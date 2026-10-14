@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MicroGen Database | Pathogen Diagnostics & Genetics</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Marked.js for markdown rendering of AI responses -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        clinical: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            900: '#134e4a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        
+        /* Markdown Prose Styling */
+        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+        .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+        .prose strong { font-weight: 600; color: #1e293b; }
+        .prose p { margin-bottom: 0.75rem; line-height: 1.5; color: #475569; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="mobile-overlay" class="fixed inset-0 bg-slate-900 bg-opacity-50 z-20 hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="bg-white w-72 h-full border-r border-slate-200 flex flex-col transition-transform duration-300 z-30 absolute lg:relative transform -translate-x-full lg:translate-x-0">
+        <div class="p-5 border-b border-slate-200 flex items-center justify-between bg-clinical-50">
+            <div class="flex items-center gap-3">
+                <div class="bg-clinical-600 text-white p-2 rounded-lg">
+                    <i data-lucide="microscope" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-clinical-900 tracking-tight">MicroGen</h1>
+                    <p class="text-xs text-clinical-600 font-medium">Genomics & Diagnostics</p>
+                </div>
+            </div>
+            <button class="lg:hidden text-slate-500 hover:text-slate-800" onclick="toggleSidebar()">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-6" id="system-menu">
+            <!-- Systems will be injected here via JS -->
+        </div>
+        
+        <div class="p-4 border-t border-slate-200 text-xs text-slate-500 text-center bg-slate-50">
+            Powered by Gemini 2.5 AI
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full relative min-w-0">
+        
+        <!-- Header -->
+        <header class="bg-white h-16 border-b border-slate-200 flex items-center justify-between px-4 lg:px-8 shrink-0 z-10">
+            <div class="flex items-center gap-4">
+                <button class="lg:hidden text-slate-600 hover:text-slate-900" onclick="toggleSidebar()">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+                <h2 id="current-view-title" class="text-lg font-semibold text-slate-800 hidden sm:block">Pathogen Database</h2>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="flex-1 max-w-xl ml-4 sm:ml-8 relative">
+                <form id="search-form" class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                    <input 
+                        type="text" 
+                        id="search-input"
+                        placeholder="Search any pathogen (e.g., Klebsiella pneumoniae)..." 
+                        class="w-full bg-slate-100 border-none rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-clinical-500 transition-all"
+                        required
+                    >
+                    <button type="submit" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-clinical-600 text-white text-xs px-3 py-1 rounded-full hover:bg-clinical-700 transition-colors">
+                        Analyze
+                    </button>
+                </form>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Area -->
+        <div id="content-area" class="flex-1 overflow-y-auto p-4 lg:p-8 bg-slate-50/50">
+            
+            <!-- Welcome State -->
+            <div id="welcome-state" class="h-full flex flex-col items-center justify-center text-center max-w-2xl mx-auto opacity-100 transition-opacity duration-300">
+                <div class="bg-white p-6 rounded-full shadow-sm mb-6">
+                    <i data-lucide="dna" class="w-16 h-16 text-clinical-500"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-slate-800 mb-4">Clinical Pathogen Intelligence</h2>
+                <p class="text-slate-600 mb-8 text-lg">
+                    Select an anatomical system or pathogen type from the sidebar to view common examples, or use the search bar to run an AI-powered genomic and clinical analysis on any microorganism.
+                </p>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <span class="px-4 py-2 bg-white rounded-full text-sm font-medium shadow-sm border border-slate-200 text-slate-700">Microbial Genomics</span>
+                    <span class="px-4 py-2 bg-white rounded-full text-sm font-medium shadow-sm border border-slate-200 text-slate-700">Growth Characteristics</span>
+                    <span class="px-4 py-2 bg-white rounded-full text-sm font-medium shadow-sm border border-slate-200 text-slate-700">Clinical Etiology</span>
+                    <span class="px-4 py-2 bg-white rounded-full text-sm font-medium shadow-sm border border-slate-200 text-slate-700">Diagnostics & Treatment</span>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading-state" class="hidden h-full flex flex-col items-center justify-center">
+                <div class="relative w-24 h-24 mb-6">
+                    <div class="absolute inset-0 border-4 border-slate-200 rounded-full"></div>
+                    <div class="absolute inset-0 border-4 border-clinical-500 rounded-full border-t-transparent animate-spin"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <i data-lucide="microscope" class="w-8 h-8 text-clinical-600 animate-pulse"></i>
+                    </div>
+                </div>
+                <h3 class="text-xl font-semibold text-slate-800 mb-2">Analyzing Pathogen...</h3>
+                <p class="text-slate-500 text-sm">Consulting Gemini 2.5 genomic and clinical datasets</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="error-state" class="hidden h-full flex flex-col items-center justify-center text-center">
+                <div class="bg-red-100 p-4 rounded-full mb-4">
+                    <i data-lucide="triangle-alert" class="w-12 h-12 text-red-600"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-slate-800 mb-2">Analysis Failed</h3>
+                <p id="error-message" class="text-slate-600 max-w-md">An error occurred while fetching the pathogen data.</p>
+                <button onclick="resetView()" class="mt-6 px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors">Return Home</button>
+            </div>
+
+            <!-- Data Dashboard State -->
+            <div id="dashboard-state" class="hidden max-w-6xl mx-auto pb-12">
+                <!-- Dashboard Header -->
+                <div class="mb-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-start justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-3 mb-2">
+                            <span id="badge-system" class="px-3 py-1 bg-clinical-100 text-clinical-800 rounded-full text-xs font-bold uppercase tracking-wide">System</span>
+                            <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-bold uppercase tracking-wide flex items-center gap-1">
+                                <i data-lucide="sparkles" class="w-3 h-3"></i> AI Generated
+                            </span>
+                        </div>
+                        <h2 id="dash-title" class="text-3xl font-bold text-slate-900 italic">Pathogen Name</h2>
+                    </div>
+                    <button onclick="window.print()" class="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors text-sm font-medium">
+                        <i data-lucide="printer" class="w-4 h-4"></i> Export Report
+                    </button>
+                </div>
+
+                <!-- Grid Layout for Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <!-- Microbiology in Pictures Card -->
+                    <div class="md:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col md:flex-row">
+                        <div class="w-full md:w-2/5 bg-slate-900 flex items-center justify-center relative min-h-[250px] md:min-h-[300px]">
+                            <!-- Image Loading State -->
+                            <div id="dash-image-loader" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-800 z-10">
+                                <div class="w-10 h-10 border-4 border-slate-600 border-t-clinical-500 rounded-full animate-spin mb-3"></div>
+                                <span class="text-xs text-slate-300 font-medium">Generating Microscopy Image...</span>
+                            </div>
+                            <!-- Image Display -->
+                            <img id="dash-image" src="" alt="Pathogen Image" class="w-full h-full object-cover hidden" 
+                                onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'64\' height=\'64\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'1.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><rect x=\'3\' y=\'3\' width=\'18\' height=\'18\' rx=\'2\' ry=\'2\'/><circle cx=\'8.5\' cy=\'8.5\' r=\'1.5\'/><polyline points=\'21 15 16 10 5 21\'/></svg>'; this.classList.add('p-12', 'opacity-50', 'object-contain');">
+                        </div>
+                        <div class="w-full md:w-3/5 p-6 flex flex-col bg-white">
+                            <div class="flex items-center gap-3 mb-4 border-b border-slate-100 pb-3">
+                                <div class="bg-pink-100 p-2 rounded-lg text-pink-600"><i data-lucide="image" class="w-5 h-5"></i></div>
+                                <h3 class="text-lg font-semibold text-slate-800">Microbiology in Pictures</h3>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 flex-1">
+                                <div>
+                                    <h4 class="text-sm font-bold text-clinical-700 uppercase tracking-wide mb-2 flex items-center gap-2"><i data-lucide="microscope" class="w-4 h-4"></i> Microscopic</h4>
+                                    <div class="prose prose-sm max-w-none text-slate-600" id="dash-microscopic"></div>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-clinical-700 uppercase tracking-wide mb-2 flex items-center gap-2"><i data-lucide="petri-dish" class="w-4 h-4 hidden"></i><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle></svg> Macroscopic</h4>
+                                    <div class="prose prose-sm max-w-none text-slate-600" id="dash-macroscopic"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Etiology & Symptoms Column -->
+                    <div class="space-y-6">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+                            <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center gap-3">
+                                <div class="bg-rose-100 p-2 rounded-lg text-rose-600"><i data-lucide="activity" class="w-5 h-5"></i></div>
+                                <h3 class="text-lg font-semibold text-slate-800">Clinical Etiology & Pathology</h3>
+                            </div>
+                            <div class="p-5 prose prose-sm max-w-none flex-1" id="dash-etiology"></div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+                            <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center gap-3">
+                                <div class="bg-amber-100 p-2 rounded-lg text-amber-600"><i data-lucide="thermometer" class="w-5 h-5"></i></div>
+                                <h3 class="text-lg font-semibold text-slate-800">Signs & Symptoms</h3>
+                            </div>
+                            <div class="p-5 prose prose-sm max-w-none flex-1" id="dash-symptoms"></div>
+                        </div>
+                    </div>
+
+                    <!-- Diagnostics & Treatment Column -->
+                    <div class="space-y-6">
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+                            <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center gap-3">
+                                <div class="bg-blue-100 p-2 rounded-lg text-blue-600"><i data-lucide="test-tubes" class="w-5 h-5"></i></div>
+                                <h3 class="text-lg font-semibold text-slate-800">Diagnosis & Lab Findings</h3>
+                            </div>
+                            <div class="p-5 flex-1 flex flex-col gap-5">
+                                <div>
+                                    <h4 class="text-sm font-bold text-clinical-700 uppercase tracking-wide mb-2 flex items-center gap-2"><i data-lucide="flask-conical" class="w-4 h-4"></i> Specific Lab Tests</h4>
+                                    <div class="prose prose-sm max-w-none text-slate-600" id="dash-diagnosis-lab"></div>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-amber-600 uppercase tracking-wide mb-2 flex items-center gap-2"><i data-lucide="award" class="w-4 h-4"></i> Gold Standard</h4>
+                                    <div class="prose prose-sm max-w-none text-slate-600" id="dash-diagnosis-gold"></div>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-purple-600 uppercase tracking-wide mb-2 flex items-center gap-2"><i data-lucide="git-compare" class="w-4 h-4"></i> Differential Diagnosis</h4>
+                                    <div class="prose prose-sm max-w-none text-slate-600" id="dash-diagnosis-diff"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+                            <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center gap-3">
+                                <div class="bg-emerald-100 p-2 rounded-lg text-emerald-600"><i data-lucide="pill" class="w-5 h-5"></i></div>
+                                <h3 class="text-lg font-semibold text-slate-800">Treatment & Resistance</h3>
+                            </div>
+                            <div class="p-5 prose prose-sm max-w-none flex-1" id="dash-treatment"></div>
+                        </div>
+                    </div>
+
+                    <!-- Wide Cards for Genetics & Growth -->
+                    <div class="md:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center gap-3">
+                            <div class="bg-purple-100 p-2 rounded-lg text-purple-600"><i data-lucide="dna" class="w-5 h-5"></i></div>
+                            <h3 class="text-lg font-semibold text-slate-800">Microbial Genomics & Genetics</h3>
+                        </div>
+                        <div class="p-5 prose prose-sm max-w-none" id="dash-genomics"></div>
+                    </div>
+
+                    <div class="md:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex items-center gap-3">
+                            <div class="bg-indigo-100 p-2 rounded-lg text-indigo-600"><i data-lucide="flask-conical" class="w-5 h-5"></i></div>
+                            <h3 class="text-lg font-semibold text-slate-800">Growth Characteristics & Culture</h3>
+                        </div>
+                        <div class="p-5 prose prose-sm max-w-none" id="dash-growth"></div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Gemini API Configuration
+        const apiKey = ""; // Provided by execution environment
+        
+        // Structured Data Categories
+        const menuSections = {
+            "By Anatomical System": {
+                "Respiratory System": {
+                    icon: "lungs",
+                    pathogens: ["Streptococcus pneumoniae", "Mycobacterium tuberculosis", "Haemophilus influenzae", "SARS-CoV-2", "Bordetella pertussis"]
+                },
+                "Gastrointestinal Tract": {
+                    icon: "stomach", // Lucide fallback
+                    pathogens: ["Helicobacter pylori", "Salmonella enterica", "Vibrio cholerae", "Clostridioides difficile", "Escherichia coli (EHEC)"]
+                },
+                "Nervous System": {
+                    icon: "brain",
+                    pathogens: ["Neisseria meningitidis", "Cryptococcus neoformans", "Rabies lyssavirus", "Clostridium tetani"]
+                },
+                "Endocrine System": {
+                    icon: "gland", // fallback
+                    pathogens: ["Staphylococcus aureus (Thyroiditis)", "Mycobacterium tuberculosis (Adrenalitis)", "Candida albicans"]
+                },
+                "Cardiovascular System": {
+                    icon: "heart-pulse",
+                    pathogens: ["Streptococcus viridans", "Staphylococcus aureus", "Coxiella burnetii", "Trypanosoma cruzi"]
+                },
+                "Urogenital Tract": {
+                    icon: "kidneys", // fallback
+                    pathogens: ["Neisseria gonorrhoeae", "Chlamydia trachomatis", "Treponema pallidum", "Escherichia coli (UPEC)"]
+                },
+                "Skin & Soft Tissue": {
+                    icon: "layers",
+                    pathogens: ["Staphylococcus aureus (MRSA)", "Streptococcus pyogenes", "Pseudomonas aeruginosa", "Clostridium perfringens"]
+                }
+            },
+            "By Pathogen Type": {
+                "Bacterial Infections": {
+                    icon: "bug",
+                    pathogens: ["Escherichia coli", "Staphylococcus aureus", "Mycobacterium tuberculosis", "Pseudomonas aeruginosa", "Streptococcus pyogenes"]
+                },
+                "Viral Infections": {
+                    icon: "virus",
+                    pathogens: ["SARS-CoV-2", "Influenza virus", "HIV", "Hepatitis B virus", "Rabies lyssavirus"]
+                },
+                "Fungal Infections": {
+                    icon: "sprout",
+                    pathogens: ["Candida albicans", "Aspergillus fumigatus", "Cryptococcus neoformans", "Histoplasma capsulatum"]
+                },
+                "Parasitic Infections": {
+                    icon: "activity",
+                    pathogens: ["Plasmodium falciparum", "Toxoplasma gondii", "Giardia lamblia", "Trypanosoma cruzi"]
+                }
+            }
+        };
+
+        // DOM Elements
+        const systemMenu = document.getElementById('system-menu');
+        const sidebar = document.getElementById('sidebar');
+        const mobileOverlay = document.getElementById('mobile-overlay');
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        
+        // View States
+        const states = {
+            welcome: document.getElementById('welcome-state'),
+            loading: document.getElementById('loading-state'),
+            error: document.getElementById('error-state'),
+            dashboard: document.getElementById('dashboard-state')
+        };
+
+        // Render Sidebar
+        function renderSidebar() {
+            systemMenu.innerHTML = '';
+            for (const [sectionTitle, categories] of Object.entries(menuSections)) {
+                
+                // Add Section Title
+                const sectionHeader = document.createElement('h2');
+                sectionHeader.className = "text-xs font-bold text-slate-800 uppercase tracking-wide mt-4 mb-3 px-2 border-b border-slate-200 pb-2";
+                if (sectionTitle === "By Anatomical System" && systemMenu.children.length === 0) {
+                     sectionHeader.classList.remove('mt-4'); // Remove top margin for the first section
+                }
+                sectionHeader.innerText = sectionTitle;
+                systemMenu.appendChild(sectionHeader);
+
+                for (const [system, data] of Object.entries(categories)) {
+                    const section = document.createElement('div');
+                    section.className = "mb-5 px-2";
+                    
+                    // Group Header
+                    const header = document.createElement('h3');
+                    header.className = "text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2";
+                    
+                    // Map icons safely
+                    let iconName = data.icon;
+                    if(iconName === "stomach") iconName = "pizza"; 
+                    if(iconName === "gland") iconName = "droplet";
+                    if(iconName === "kidneys") iconName = "droplets";
+
+                    header.innerHTML = `<i data-lucide="${iconName}" class="w-3 h-3"></i> ${system}`;
+                    section.appendChild(header);
+
+                    // List Items
+                    const ul = document.createElement('ul');
+                    ul.className = "space-y-1";
+                    
+                    data.pathogens.forEach(pathogen => {
+                        const li = document.createElement('li');
+                        const btn = document.createElement('button');
+                        btn.className = "w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-clinical-700 hover:bg-clinical-50 transition-colors truncate";
+                        btn.innerText = pathogen;
+                        btn.onclick = () => {
+                            analyzePathogen(pathogen);
+                            if(window.innerWidth < 1024) toggleSidebar(); // Close sidebar on mobile
+                        };
+                        li.appendChild(btn);
+                        ul.appendChild(li);
+                    });
+                    
+                    section.appendChild(ul);
+                    systemMenu.appendChild(section);
+                }
+            }
+            lucide.createIcons();
+        }
+
+        // Toggle Mobile Sidebar
+        function toggleSidebar() {
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+            if (isClosed) {
+                sidebar.classList.remove('-translate-x-full');
+                mobileOverlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                mobileOverlay.classList.add('hidden');
+            }
+        }
+
+        // State Management
+        function switchState(stateName) {
+            Object.values(states).forEach(el => el.classList.add('hidden'));
+            states[stateName].classList.remove('hidden');
+        }
+
+        function resetView() {
+            switchState('welcome');
+            searchInput.value = '';
+        }
+
+        // Handle Search Submit
+        searchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const query = searchInput.value.trim();
+            if (query) {
+                analyzePathogen(query);
+                searchInput.blur();
+            }
+        });
+
+        // Fetch Data from Gemini API with Exponential Backoff
+        async function fetchGeminiData(pathogenName) {
+            const prompt = `Act as an expert clinical microbiologist and geneticist. Provide comprehensive, accurate data for the human pathogen: "${pathogenName}". 
+            Format the output ONLY as a valid JSON object matching the requested schema. Use detailed markdown formatting (lists, bold text) inside the JSON string values for readability.
+            Focus heavily on clinical etiology, signs/symptoms, specific laboratory diagnostic tests, the gold standard for diagnosis, differential diagnosis, treatments, growth characteristics (culture media, conditions), microbial genomics, and detailed visual morphology.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            name: { type: "STRING", description: "Scientific name of the pathogen" },
+                            system: { type: "STRING", description: "Primary anatomical system affected (e.g., Respiratory, Gastrointestinal)" },
+                            microscopic: { type: "STRING", description: "Microscopic appearance, Gram stain, cell shape, arrangement, spores (use markdown)" },
+                            macroscopic: { type: "STRING", description: "Macroscopic appearance, colony morphology on specific agar plates, hemolysis (use markdown)" },
+                            genomics: { type: "STRING", description: "Microbial genomics, genome structure, plasmids, genetic virulence factors (use markdown)" },
+                            growth_characteristics: { type: "STRING", description: "Culture media requirements, atmospheric conditions, biochemical traits (use markdown)" },
+                            etiology: { type: "STRING", description: "Clinical etiology and pathophysiology (use markdown)" },
+                            symptoms: { type: "STRING", description: "Classic signs and symptoms of infection (use markdown)" },
+                            diagnosis_lab: { type: "STRING", description: "Specific laboratory diagnostic tests, stains, and biochemical tests used to identify it (use markdown)" },
+                            diagnosis_gold_standard: { type: "STRING", description: "The definitive gold standard method for diagnosis (use markdown)" },
+                            differential_diagnosis: { type: "STRING", description: "Common differential diagnoses (other pathogens or conditions with similar presentation) (use markdown)" },
+                            treatment: { type: "STRING", description: "Standard antimicrobial therapy and resistance mechanisms (use markdown)" }
+                        },
+                        required: ["name", "system", "microscopic", "macroscopic", "genomics", "growth_characteristics", "etiology", "symptoms", "diagnosis_lab", "diagnosis_gold_standard", "differential_diagnosis", "treatment"]
+                    }
+                }
+            };
+
+            const maxRetries = 5;
+            const delays = [1000, 2000, 4000, 8000, 16000];
+
+            for (let retries = 0; retries <= maxRetries; retries++) {
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json().catch(()=>({}));
+                        throw new Error(`API Error ${response.status}: ${errData.error?.message || 'Unknown error'}`);
+                    }
+
+                    const data = await response.json();
+                    const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (!textContent) throw new Error("Empty response from AI model.");
+                    
+                    return JSON.parse(textContent);
+
+                } catch (error) {
+                    console.error(`Attempt ${retries + 1} failed:`, error);
+                    if (retries === maxRetries) {
+                        throw error;
+                    }
+                    // Wait for exponential backoff delay before retrying
+                    await new Promise(resolve => setTimeout(resolve, delays[retries]));
+                }
+            }
+        }
+
+        // Fetch AI Generated Image (Imagen API)
+        async function fetchPathogenImage(pathogenName) {
+            const promptText = `Microbiology laboratory macro photography of ${pathogenName}. High resolution medical imaging showing either a detailed microscopic view (like Gram stain) or macroscopic agar culture colonies. Highly detailed, scientific, professional.`;
+            
+            const payload = {
+                instances: [{ prompt: promptText }],
+                parameters: { sampleCount: 1 }
+            };
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error("Image generation failed");
+                
+                const result = await response.json();
+                if (result.predictions && result.predictions[0]) {
+                    return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
+                }
+                throw new Error("No image data returned");
+            } catch (error) {
+                console.error("Imagen API Error:", error);
+                return null; // Return null so we can trigger the fallback SVG
+            }
+        }
+
+        // Main Analyze Function
+        async function analyzePathogen(pathogenName) {
+            switchState('loading');
+            document.getElementById('current-view-title').innerText = "Analyzing...";
+            
+            // Reset image state
+            const imgEl = document.getElementById('dash-image');
+            const loaderEl = document.getElementById('dash-image-loader');
+            imgEl.classList.add('hidden');
+            imgEl.classList.remove('p-12', 'opacity-50', 'object-contain'); // Remove fallback styles
+            loaderEl.classList.remove('hidden');
+
+            try {
+                // Start text and image fetching simultaneously
+                const [data, imageUrl] = await Promise.all([
+                    fetchGeminiData(pathogenName),
+                    fetchPathogenImage(pathogenName)
+                ]);
+
+                populateDashboard(data);
+                
+                // Handle Image
+                if (imageUrl) {
+                    imgEl.src = imageUrl;
+                } else {
+                    // Trigger onerror fallback
+                    imgEl.dispatchEvent(new Event('error'));
+                }
+                
+                imgEl.onload = () => {
+                    loaderEl.classList.add('hidden');
+                    imgEl.classList.remove('hidden');
+                };
+
+                switchState('dashboard');
+                document.getElementById('current-view-title').innerText = data.name;
+            } catch (error) {
+                document.getElementById('error-message').innerText = "Failed to retrieve pathogen data. Please try again or check your query. " + error.message;
+                switchState('error');
+                document.getElementById('current-view-title').innerText = "Error";
+            }
+        }
+
+        // Populate Dashboard UI
+        function populateDashboard(data) {
+            document.getElementById('dash-title').innerText = data.name;
+            document.getElementById('badge-system').innerText = data.system;
+
+            // Render markdown content using Marked.js safely
+            document.getElementById('dash-microscopic').innerHTML = marked.parse(data.microscopic || 'Data unavailable.');
+            document.getElementById('dash-macroscopic').innerHTML = marked.parse(data.macroscopic || 'Data unavailable.');
+            document.getElementById('dash-genomics').innerHTML = marked.parse(data.genomics || 'Data unavailable.');
+            document.getElementById('dash-growth').innerHTML = marked.parse(data.growth_characteristics || 'Data unavailable.');
+            document.getElementById('dash-etiology').innerHTML = marked.parse(data.etiology || 'Data unavailable.');
+            document.getElementById('dash-symptoms').innerHTML = marked.parse(data.symptoms || 'Data unavailable.');
+            document.getElementById('dash-diagnosis-lab').innerHTML = marked.parse(data.diagnosis_lab || 'Data unavailable.');
+            document.getElementById('dash-diagnosis-gold').innerHTML = marked.parse(data.diagnosis_gold_standard || 'Data unavailable.');
+            document.getElementById('dash-diagnosis-diff').innerHTML = marked.parse(data.differential_diagnosis || 'Data unavailable.');
+            document.getElementById('dash-treatment').innerHTML = marked.parse(data.treatment || 'Data unavailable.');
+        }
+
+        // Initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            renderSidebar();
+        });
+
+    </script>
+</body>
+</html>
